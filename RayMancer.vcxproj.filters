@@ -1,0 +1,40 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Data">
+      <UniqueIdentifier>{f6bc9d90-ef83-4048-9a77-2943aa98b831}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Source\PixelToaster">
+      <UniqueIdentifier>{7f9269d1-ab33-48ad-8230-2ac566467410}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="src\main.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="src\PixelToaster\PixelToaster.cpp">
+      <Filter>Source\PixelToaster</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="src\PixelToaster\PixelToaster.h">
+      <Filter>Source\PixelToaster</Filter>
+    </ClInclude>
+    <ClInclude Include="src\PixelToaster\PixelToasterCommon.h">
+      <Filter>Source\PixelToaster</Filter>
+    </ClInclude>
+    <ClInclude Include="src\PixelToaster\PixelToasterConversion.h">
+      <Filter>Source\PixelToaster</Filter>
+    </ClInclude>
+    <ClInclude Include="src\PixelToaster\PixelToasterWindows.h">
+      <Filter>Source\PixelToaster</Filter>
+    </ClInclude>
+    <ClInclude Include="src\main.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>
