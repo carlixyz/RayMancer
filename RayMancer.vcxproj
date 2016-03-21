@@ -76,15 +76,18 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="src\AppManager.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\PixelToaster\PixelToaster.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\AppManager.h" />
     <ClInclude Include="src\main.h" />
     <ClInclude Include="src\PixelToaster\PixelToaster.h" />
     <ClInclude Include="src\PixelToaster\PixelToasterCommon.h" />
     <ClInclude Include="src\PixelToaster\PixelToasterConversion.h" />
     <ClInclude Include="src\PixelToaster\PixelToasterWindows.h" />
+    <ClInclude Include="src\Singleton.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

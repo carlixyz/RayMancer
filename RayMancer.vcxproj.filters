@@ -9,7 +9,7 @@
       <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
     </Filter>
     <Filter Include="Source\PixelToaster">
-      <UniqueIdentifier>{7f9269d1-ab33-48ad-8230-2ac566467410}</UniqueIdentifier>
+      <UniqueIdentifier>{48b25af7-af3f-41c5-bffa-21d408f9e956}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -19,8 +19,14 @@
     <ClCompile Include="src\PixelToaster\PixelToaster.cpp">
       <Filter>Source\PixelToaster</Filter>
     </ClCompile>
+    <ClCompile Include="src\AppManager.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\main.h">
+      <Filter>Source</Filter>
+    </ClInclude>
     <ClInclude Include="src\PixelToaster\PixelToaster.h">
       <Filter>Source\PixelToaster</Filter>
     </ClInclude>
@@ -33,7 +39,10 @@
     <ClInclude Include="src\PixelToaster\PixelToasterWindows.h">
       <Filter>Source\PixelToaster</Filter>
     </ClInclude>
-    <ClInclude Include="src\main.h">
+    <ClInclude Include="src\Singleton.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="src\AppManager.h">
       <Filter>Source</Filter>
     </ClInclude>
   </ItemGroup>
