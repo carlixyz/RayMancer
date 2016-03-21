@@ -14,7 +14,6 @@ using namespace PixelToaster;
 
 #include "main.h"
 
-DWORD screen[320 * 240];
 
 DWORD *MapRef;
 DWORD *winRef;
@@ -22,40 +21,43 @@ DWORD *winRef;
 AppManager MainApp;
 AppManager MapView;
 
-PixelBuffer backBuffer(SCREEN_W, SCREEN_H);
+PixelBuffer backBuffer(SCREEN_W, SCREEN_H);	// Main Window PreBuffer
+
 PixelBuffer mapBuffer(Map.width * Map.Scale, Map.height * Map.Scale);
+PixelBuffer PreBuffer(Map.width * Map.Scale, Map.height * Map.Scale);
 
 void main()
 {
 	winRef = MainApp.OpenWindow("RayMancer", SCREEN_W, SCREEN_H);
-	MapRef = MapView.OpenWindow("Top View Mini-MAP", (Map.width * Map.Scale), (Map.height * Map.Scale));
+	MapRef = MapView.OpenWindow("Top View Mini-MAP", (Map.width * Map.Scale*2), (Map.height * Map.Scale*2));
 
 	assert(winRef != NULL && MapRef != NULL);
 	gfx::rasterMap(Map, mapBuffer);
 
 	while (true)
 	{
-
 		if (MainApp.KeyPressed(Key::Q) || MainApp.WindowClosed() || MapView.KeyPressed(Key::Q))
 			break;
 
-		MapView.canvas = mapBuffer;
+		PreBuffer = mapBuffer;
 
-		Player.Draw1UP(MapView.canvas);
+		//Player.Draw1UP(MapView.canvas);
+		Player.Draw1UP(PreBuffer);
 		Player.UpdateInput(MapView.time.delta());
 
 		MainApp.ForgetKeys();
 		MapView.ForgetKeys();
 	
 		MainApp.UpdateWindow();
-		MapView.UpdateWindow();
+		//MapView.UpdateWindow();
+
+		MapView.UpdateWindow(PreBuffer);
 	}
 
 
 	//HKFree();
 	MainApp.CloseWindow();
 	MapView.CloseWindow();
-
 
 }
 
@@ -104,6 +106,9 @@ void Entity::UpdateInput(float timeStep)
 	// Calculate new player position with simple trigonometry
 	float newX = posX + cos(Rot) * moveStep;
 	float newY = posY + sin(Rot) * moveStep;
+
+	if ( Map.isBlocked(newX, newY) )
+		return;
 
 	// Set new position
 	posX = newX;

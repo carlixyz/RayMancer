@@ -47,9 +47,35 @@ void AppManager::UpdateWindow()
 {
 	window->update(this->canvas.Data);
 
+	ForgetKeys();
+
 }
 
-void AppManager::SetPixel(int i, DWORD color)
+void AppManager::UpdateWindow(PixelBuffer & pBuffer) // Take a source buffer & duplicates its size in windows
 {
-	canvas.Data[i].integer = color;
+
+	int HalfWidth = pBuffer.Width;	// These needs to be HALF_SIZE of Destiny Buffer always
+	int HalfHeight = pBuffer.Height;
+	//int HalfWidth = (canvas.Width>>1);
+	//int HalfHeight = (canvas.Height>>1);
+
+	DWORD * dp = &canvas.Data[0].integer;;
+	DWORD * sp = &pBuffer.Data[0].integer;
+	for (int y = 0; y < HalfHeight; y++)
+	{
+		for (int x = 0; x < HalfWidth; x++)
+		{
+			*dp++ = *sp;
+			*dp++ = *sp++;
+		}
+		sp -= HalfWidth;
+		for (int x = 0; x < HalfWidth; x++)
+		{
+			*dp++ = *sp;
+			*dp++ = *sp++;
+		}
+	}
+	window->update(canvas.Data);
+	ForgetKeys();
 }
+

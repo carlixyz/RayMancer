@@ -21,7 +21,7 @@ struct PixelBuffer // PixelBuffer
 	int Height;
 	int Area;
 
-	PixelBuffer(){ ; }
+	PixelBuffer(){;}
 	inline PixelBuffer(int width, int height)
 	{
 		Width = width;
@@ -35,6 +35,17 @@ struct PixelBuffer // PixelBuffer
 		Height = height;
 		Area = Width * Height;
 		Data.resize(Area);
+	}
+	inline void SetPixel(int x, int y, DWORD color)
+	{
+		if (x<0 || y<0 || x >= Width || y >= Height)
+			return;
+		Data[y * Width + x].integer = color;
+	}
+	inline void Cls(DWORD color = 0x00000000)	// Clear Screen to black
+	{
+		for (int i = 0; i < Area; i++)
+			Data[i].integer = color;
 	}
 };
 
@@ -58,7 +69,7 @@ public:
 
 	void UpdateWindow();
 
-	void SetPixel(int i, DWORD color);
+	void UpdateWindow(PixelBuffer &pBuffer);
 
 	Timer time;
 	Display* window;

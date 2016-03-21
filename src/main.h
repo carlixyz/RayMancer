@@ -4,17 +4,19 @@
 struct Entity
 {
 	float posX;			// Current x, y position of the player
-	float posY;			
-	float Dir;			// The direction that the player is turning, either -1 for left or 1 for right
-	float Rot;			// The current angle of rotation
-	float Move;		// playing moving forward(speed = 1) or backwards (speed = -1).
-	float MoveSpeed;	// How far (in map units) does the player move each step/update
-	float RotSpeed;		// How much does the player rotate each step/update (in radians)
+	float posY;			// 
+	float Rot;			// current angle of rotation
+
+	float Dir;			// Input Enabler: The direction that the player is turning, -1 for left or 1 for right
+	float Move;			// Input Enabler: playing moving forward(speed = 1) or backwards (speed = -1).
+
+	float MoveSpeed;	// Move Multiplier: How far (in map units) does the player move each step/update
+	float RotSpeed;		// Rot Multiplier: How much does the player rotate each step/update (in radians)
 
 	void Draw1UP(PixelBuffer & Dst);
 	void UpdateInput(float tStep);
 
-} Player = { 2, 2, 1, 1, 0, 0.18f,  0.105f};
+} Player = { 2, 2, 1, 0, 0, 0.18f,  0.105f};
 
 
 struct World
@@ -25,6 +27,14 @@ struct World
 	uint32_t Area;
 	uint32_t Scale;	// 32
 	int data[100];
+
+	inline bool isBlocked(int x, int y)
+	{
+		if (y < 0 || y >= height || x < 0 || x >= width)  
+			return true;			//make sure that we cannot move outside level
+									// Return true if the map block is not 0, (if there is a blocking wall)
+		return (data[(int)(x+y*width)] );
+	}
 } Map = 
 { 64, 10, 10, 100, 32,
 	{
