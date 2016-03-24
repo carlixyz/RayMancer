@@ -47,6 +47,14 @@ struct PixelBuffer // PixelBuffer
 		for (int i = 0; i < Area; i++)
 			Data[i].integer = color;
 	}
+	inline bool onArea(int x, int y)
+	{
+		return (x >= 0 && y >= 0 && x < Width && y < Height);
+	}
+	DWORD &PixelBuffer::operator[](int index)
+	{
+		return Data[index].integer;
+	}
 };
 
 
@@ -69,7 +77,7 @@ public:
 
 	void UpdateWindow();
 
-	void UpdateWindow(PixelBuffer &pBuffer);
+	void UpdateWindowX2(PixelBuffer &pBuffer);
 
 	Timer time;
 	Display* window;

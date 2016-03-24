@@ -30,7 +30,8 @@ DWORD *AppManager::OpenWindow(char* title, int width, int height)
 	if (!window->open())
 		return NULL;
 	else
-		return &canvas.Data[0].integer; // yikes
+		//return &canvas.Data[0].integer; // yikes
+		return &canvas[0]; // yikes
 }
 
 bool AppManager::WindowClosed()
@@ -45,14 +46,14 @@ void AppManager::CloseWindow()
 
 void AppManager::UpdateWindow()
 {
-	window->update(this->canvas.Data);
-
 	ForgetKeys();
 
+	window->update(this->canvas.Data);
 }
 
-void AppManager::UpdateWindow(PixelBuffer & pBuffer) // Take a source buffer & duplicates its size in windows
+void AppManager::UpdateWindowX2(PixelBuffer & pBuffer) // Take a source buffer & duplicates its size in windows
 {
+	ForgetKeys();
 
 	int HalfWidth = pBuffer.Width;	// These needs to be HALF_SIZE of Destiny Buffer always
 	int HalfHeight = pBuffer.Height;
@@ -75,7 +76,7 @@ void AppManager::UpdateWindow(PixelBuffer & pBuffer) // Take a source buffer & d
 			*dp++ = *sp++;
 		}
 	}
+
 	window->update(canvas.Data);
-	ForgetKeys();
 }
 
