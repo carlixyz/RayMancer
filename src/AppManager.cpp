@@ -1,4 +1,5 @@
 #include "AppManager.h"
+#include <assert.h> 
 
 bool AppManager::KeyPressed(Key key)
 {
@@ -50,6 +51,22 @@ void AppManager::UpdateWindow()
 
 	window->update(this->canvas.Data);
 }
+
+
+void AppManager::UpdateWindow(PixelBuffer  & pBuffer)
+{
+	ForgetKeys();
+
+	assert(pBuffer.Area < canvas.Area);
+
+	//for (int x = 0; x < pBuffer.Width; x++)
+	//for (int y = 0; y < pBuffer.Height; y++)
+	//	canvas[y*canvas.Width + x] = pBuffer[pBuffer.Width * y + x]; //clear the buffer instead of cls()
+
+	canvas.Data = pBuffer.Data;
+	window->update(this->canvas.Data);
+}
+
 
 void AppManager::UpdateWindowX2(PixelBuffer & pBuffer) // Take a source buffer & duplicates its size in windows
 {

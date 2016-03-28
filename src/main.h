@@ -2,36 +2,49 @@
 #include "AppManager.h"
 #include "Vector.h"
 
+#include <math.h>
+#include <assert.h> 
 
 #define PI 3.14159265f
+#define PI2 3.14159265f*2
 float radians = PI / 180;
 float degrees = 180 / PI;
 #define RAD(ang) ang*radians
 #define DEG(ang) ang*degrees
 
+
 struct Ray
 {
+	//int stripWidth = 2;
 
 };
 
 struct Entity
 {
-	float posX;			// Current x, y position of the player
-	float posY;			// 
+	float posX =3;			// Current x, y position of the player
+	float posY =2;			// 
 	//Vector Pos;
-	float Rot;			// current angle of rotation
+	float Rot =1;			// current angle of rotation
 
-	float Dir;			// Input Enabler: The direction that the player is turning, -1 for left or 1 for right
-	float Move;			// Input Enabler: playing moving forward(speed = 1) or backwards (speed = -1).
+	float Dir =0;			// Input Enabler: The direction that the player is turning, -1 for left or 1 for right
+	float Move =0;			// Input Enabler: playing moving forward(speed = 1) or backwards (speed = -1).
 
-	float MoveSpeed;	// Move Multiplier: How far (in map units) does the player move each step/update
-	float RotSpeed;		// Rot Multiplier: How much does the player rotate each step/update (in radians)
+	float MoveSpeed =0.18f;	// Move Multiplier: How far (in map units) does the player move each step/update
+	float RotSpeed =0.1f;		// Rot Multiplier: How much does the player rotate each step/update (in radians)
+
+	int stripWidth = 2;		// Def: 2
+	int numRays = ceil(HALF_SCR_W / stripWidth);
+	float FOV = RAD(60);
+	float FOVHalf = FOV / 2;
+	float viewDist = (HALF_SCR_W / 2) / tan((FOV / 2));	
+	// Remember I'm using the half of the half width size because I'm working with 320/2 (and then rendering twice resolution for "artsy" impact)
 
 	void DrawInMap(PixelBuffer & Dst);
 	void UpdateInput(float tStep);
+	void CastRays();
+	void CastSingleRay(float rayAngle, int stripIdx);
 
-} Player = { 2, 2, 1, 0, 0, 0.18f, 0.105f };
-//} Player = { {2,2,0}, 1, 0, 0, 0.18f, 0.105f };
+} Player;
 
 
 struct World
@@ -53,10 +66,26 @@ struct World
 		return (data[(int)(x+y*width)] );
 	}
 
+	inline void rasterMap( PixelBuffer &dst)
+	{
+		double scaleWidth = (double)dst.Width / (double)width;
+		double scaleHeight = (double)dst.Height / (double)height;
+
+		for (uint32_t cy = 0; cy < dst.Height; cy++)
+			for (uint32_t cx = 0; cx < dst.Width; cx++)
+			{
+				int pixel = (cy * (dst.Width)) + (cx);
+				int nearestMatch = (((int)(cy / scaleHeight) * (width)) + ((int)(cx / scaleWidth)));
+
+				//dst[pixel] = (src.data[nearestMatch] != 0 ? 0x00FF00FF : 0x0000FF00);
+				dst[pixel] = (data[nearestMatch] != 0 ? 0x008800FF : 0x00000000);
+			}
+	}
+
 	Ray cast(Entity &player, float angle, float range);
 
 } Map = 
-{ 64, 10, 10, 100, 32,
+{ 64, 10, 10, 100, 16,
 	{
 	0, 0, 1, 1, 1, 1, 1, 1, 1, 1,
 	1, 0, 0, 0, 0, 0, 0, 0, 0, 1,
@@ -73,11 +102,18 @@ struct World
 
 
 
-#include <math.h>
+
 
 
 namespace gfx
 {
+	int clamp(int n, int lower, int upper)
+	{
+		//return std::max(lower, std::min(n, upper));
+		return n + ((n < lower) * (lower - n)) + ((n > upper) * (upper - n));
+		//return n <= lower ? lower : n >= upper ? upper : n;
+	}
+
 	// resize the data from a source to a destiny buffer
 	void scale(PixelBuffer &src, PixelBuffer &dst)
 	{
@@ -102,25 +138,20 @@ namespace gfx
 		scale(src, dst);
 	}
 
-	void rasterMap(struct World &src, PixelBuffer &dst)
+	// Add info from one source Buffer onto antoher destiny inside coords input
+	void add(PixelBuffer &src, PixelBuffer &dst, uint32_t xCoord = 0, uint32_t yCoord = 0)
 	{
-		double scaleWidth = (double)dst.Width / (double)src.width;
-		double scaleHeight = (double)dst.Height / (double)src.height;
+		assert(src.Area < dst.Area); // && xCoord + src.Width < dst.Width  
+		//							&& ((yCoord *dst.Width) + src.Height < dst.Area) );
+		xCoord = clamp(xCoord, 0, dst.Width - src.Width);
+		yCoord = clamp(yCoord, 0, dst.Height - src.Height);
 
-		for (uint32_t cy = 0; cy < dst.Height; cy++)
-		{
-			for (uint32_t cx = 0; cx < dst.Width; cx++)
-			{
-				int pixel = (cy * (dst.Width)) + (cx);
-				int nearestMatch = (((int)(cy / scaleHeight) * (src.width)) + ((int)(cx / scaleWidth)));
-
-				//dst[pixel] = (src.data[nearestMatch] != 0 ? 0x00FF00FF : 0x0000FF00);
-				dst[pixel] = (src.data[nearestMatch] != 0 ? 0x00FF00FF : 0x00000000);
-			}
-		}
+		for (int x = 0; x < src.Width; x++)
+		for (int y = 0; y < src.Height; y++)
+			dst[(y+ yCoord)*dst.Width + (x + xCoord)] |= src[src.Width * y + x]; //Add
 	}
-	
-	bool drawRect(const DWORD& color, uint32_t x1, uint32_t y1, uint32_t x2, uint32_t y2, PixelBuffer &dst)
+
+	bool drawRect(uint32_t x1, uint32_t y1, uint32_t x2, uint32_t y2, PixelBuffer &dst, const DWORD& color = 0x00888888)
 	{
 
 		if (x1 < 0 || x1 > dst.Width - 1 || x2 < 0 || x2 > dst.Width - 1 || y1 < 0 || y1 > dst.Height - 1 || y2 < 0 || y2 > dst.Height - 1)
@@ -140,15 +171,8 @@ namespace gfx
 		return 1;
 	}
 
-	int clamp(int n, int lower, int upper) 
-	{
-		//return std::max(lower, std::min(n, upper));
-		return n + ((n < lower) * (lower - n)) + ((n > upper) * (upper - n));
-		//return n <= lower ? lower : n >= upper ? upper : n;
-	}
-
-	//Bresenham line from (x1,y1) to (x2,y2) with rgb color
-	bool drawLine(const DWORD& color, int x1, int y1, int x2, int y2, PixelBuffer &Dst, int brush = 2)
+		//Bresenham line from (x1,y1) to (x2,y2) with rgb color
+	bool drawLine(int x1, int y1, int x2, int y2, PixelBuffer &Dst, const DWORD& color = 0x00888888, int brush = 2)
 	{
 		x1 = clamp(x1, 0, Dst.Width - (brush));
 		y1 = clamp(y1, 0, Dst.Height - (brush));
@@ -231,7 +255,7 @@ namespace gfx
 	}
 
 	//Fast vertical line from (x,y1) to (x,y2), with rgb color
-	bool verLine(const DWORD& color, int sx, int sy1, int sy2, PixelBuffer &Dst)
+	bool verLine(int sx, int sy1, int sy2, PixelBuffer &Dst, const DWORD& color = 0x00888888)
 	{
 		if (sy2 < sy1)
 			{ sy1 += sy2; sy2 = sy1 - sy2; sy1 -= sy2; } //swap y1 and y2
@@ -253,7 +277,6 @@ namespace gfx
 		return 1;
 	}
 
-
 	/*void rotate_texture(int id)
 	{
 		DWORD temp[64 * 64];
@@ -263,11 +286,6 @@ namespace gfx
 		for (int i = 0; i<64 * 64; i++)
 			textures[id].data[i] = temp[i];
 	}*/
-
-	int resolution = SCREEN_W >> 1;
-	int range = 14; // MOBILE ? 8 : 14;
-	float focalLength = 0.8f;
-	
 
 
 	//void Render();

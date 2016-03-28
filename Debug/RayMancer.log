@@ -1,29 +1,5 @@
-﻿Compilación iniciada a las 24/03/2016 17:17:45.
-     1>Proyecto "D:\Mis Documentos\GitHub\Return2C++\Raymaster\RayMancer\RayMancer\RayMancer.vcxproj" en el nodo 2 (Build destinos).
-     1>ClCompile:
-         C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\bin\CL.exe /c /I"D:\Mis Documentos\GitHub\Return2C++\Raymaster\RayMancer\RayMancer\\src\\" /ZI /nologo /W3 /WX- /sdl /Od /Oy- /D _MBCS /Gm /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Fo"Debug\\" /Fd"Debug\vc120.pdb" /Gd /TP /analyze- /errorReport:prompt src\main.cpp
-         main.cpp
-     1>d:\mis documentos\github\return2c++\raymaster\raymancer\raymancer\src\main.h(50): warning C4018: '>=' : no coinciden signed/unsigned
-     1>d:\mis documentos\github\return2c++\raymaster\raymancer\raymancer\src\main.h(53): warning C4800: 'int' : forzando el valor a bool 'true' o 'false' (advertencia de rendimiento)
-     1>d:\mis documentos\github\return2c++\raymaster\raymancer\raymancer\src\main.h(87): warning C4018: '<' : no coinciden signed/unsigned
-     1>d:\mis documentos\github\return2c++\raymaster\raymancer\raymancer\src\main.h(89): warning C4018: '<' : no coinciden signed/unsigned
-     1>d:\mis documentos\github\return2c++\raymaster\raymancer\raymancer\src\main.h(110): warning C4018: '<' : no coinciden signed/unsigned
-     1>d:\mis documentos\github\return2c++\raymaster\raymancer\raymancer\src\main.h(112): warning C4018: '<' : no coinciden signed/unsigned
-     1>d:\mis documentos\github\return2c++\raymaster\raymancer\raymancer\src\main.h(126): warning C4018: '>' : no coinciden signed/unsigned
-     1>d:\mis documentos\github\return2c++\raymaster\raymancer\raymancer\src\main.cpp(48): warning C4244: 'argumento' : conversión de 'double' a 'float'; posible pérdida de datos
-     1>d:\mis documentos\github\return2c++\raymaster\raymancer\raymancer\src\main.cpp(85): warning C4244: 'argumento' : conversión de 'float' a 'int'; posible pérdida de datos
-     1>d:\mis documentos\github\return2c++\raymaster\raymancer\raymancer\src\main.cpp(86): warning C4244: 'argumento' : conversión de 'float' a 'int'; posible pérdida de datos
-     1>d:\mis documentos\github\return2c++\raymaster\raymancer\raymancer\src\main.cpp(89): warning C4244: 'argumento' : conversión de 'float' a 'uint32_t'; posible pérdida de datos
-     1>d:\mis documentos\github\return2c++\raymaster\raymancer\raymancer\src\main.cpp(90): warning C4244: 'argumento' : conversión de 'float' a 'int'; posible pérdida de datos
-     1>d:\mis documentos\github\return2c++\raymaster\raymancer\raymancer\src\main.cpp(122): warning C4244: 'argumento' : conversión de 'float' a 'int'; posible pérdida de datos
-     1>d:\mis documentos\github\return2c++\raymaster\raymancer\raymancer\src\main.cpp(125): warning C4244: 'argumento' : conversión de 'float' a 'int'; posible pérdida de datos
-       Link:
-         C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\bin\link.exe /ERRORREPORT:PROMPT /OUT:"D:\Mis Documentos\GitHub\Return2C++\Raymaster\RayMancer\RayMancer\\RayMancer.exe" /INCREMENTAL /NOLOGO kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /DEBUG /PDB:"D:\Mis Documentos\GitHub\Return2C++\Raymaster\RayMancer\RayMancer\\RayMancer.pdb" /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"D:\Mis Documentos\GitHub\Return2C++\Raymaster\RayMancer\RayMancer\\RayMancer.lib" /MACHINE:X86 Debug\AppManager.obj
-         Debug\main.obj
-         Debug\PixelToaster.obj
-         RayMancer.vcxproj -> D:\Mis Documentos\GitHub\Return2C++\Raymaster\RayMancer\RayMancer\\RayMancer.exe
-     1>Compilación del proyecto terminada "D:\Mis Documentos\GitHub\Return2C++\Raymaster\RayMancer\RayMancer\RayMancer.vcxproj" (Build destinos).
+﻿Compilación iniciada a las 28/03/2016 10:27:40.
 
 Compilación correcta.
 
-Tiempo transcurrido 00:00:03.63
+Tiempo transcurrido 00:00:00.68

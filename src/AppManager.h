@@ -44,8 +44,13 @@ struct PixelBuffer // PixelBuffer
 	}
 	inline void Cls(DWORD color = 0x00000000)	// Clear Screen to black
 	{
-		for (int i = 0; i < Area; i++)
-			Data[i].integer = color;
+		//memset(&v[0], 0, v.size() * sizeof v[0]);
+		//for (int i = 0; i < Area; i++)
+		//	Data[i].integer = color;
+		std::fill(Data.begin(), Data.end(), (TrueColorPixel)color);
+		//for (std::vector<int>::iterator it = v.begin(), end = v.end(); it != end; ++it) 
+		//	*it = 0;
+
 	}
 	inline bool onArea(int x, int y)
 	{
@@ -76,6 +81,8 @@ public:
 	void CloseWindow();
 
 	void UpdateWindow();
+
+	void UpdateWindow(PixelBuffer  & pBuffer);
 
 	void UpdateWindowX2(PixelBuffer &pBuffer);
 
