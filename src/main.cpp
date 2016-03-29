@@ -21,11 +21,12 @@ AppManager MainApp;
 
 PixelBuffer MapBuffer(Map.width * Map.Scale, Map.height * Map.Scale);	// Map Buffer
 PixelBuffer backBuffer(SCREEN_W >> 1, SCREEN_H >> 1);						// Main Window PreBuffer
-PixelBuffer scree(SCREEN_W >> 1, SCREEN_H >> 1);						// Main Window PreBuffer
+//PixelBuffer screen(SCREEN_W >> 1, SCREEN_H >> 1);						// Main Window PreBuffer
 
 
 #include	<iostream>
-bool ShowMap = true;
+bool ShowMap = false;
+bool EyeFish = false;
 
 void main()
 {
@@ -46,18 +47,15 @@ void main()
 			break;
 		if (MainApp.KeyHit(Key::Tab))
 			ShowMap = !ShowMap;
+		if (MainApp.KeyHit(Key::E))
+			EyeFish = !EyeFish;
 
+		Map.rasterMap(MapBuffer);					// BUILD MAP & DRAW PLAYER ORIENTATION
+		Player.DrawInMap(MapBuffer);
+		Player.CastRays();
 
 		if (ShowMap)
-		{
-			Map.rasterMap(MapBuffer);					// BUILD MAP & DRAW PLAYER ORIENTATION
-			Player.CastRays();
-			Player.DrawInMap(MapBuffer);
 			gfx::add(MapBuffer, backBuffer, 220, 140);	// ADD MINI MAP TO DOWN-RIGHT CORNER
-
-		}
-
-
 
 
 		MainApp.UpdateWindowX2(backBuffer);
@@ -89,10 +87,13 @@ void Entity::CastRays()
 
 void Entity::CastSingleRay(float rayAngle, int stripIdx)
 {
-	rayAngle = fmodf(rayAngle, PI2 );
+	rayAngle = fmodf(rayAngle, PI2 );		// Clamp all values always between:  0 ~ twoPI
+	rayAngle += (PI2 * (rayAngle < 0));		// if (rayAngle < 0) rayAngle += twoPI; 
+	
 
-	//if (rayAngle < 0) rayAngle += PI2;
-	rayAngle += (PI2 * (rayAngle < 0));
+	//if (stripIdx != 80)
+	//	return;
+	//cout << "Ray Angle: " << rayAngle << endl;
 
 	// ismoving right/left? up/down? >> Check in which quadrant the angle is aiming
 	bool right = (rayAngle > PI2 * 0.75f || rayAngle < PI2 * 0.25f);
@@ -107,13 +108,12 @@ void Entity::CastSingleRay(float rayAngle, int stripIdx)
 	float xHit = 0; 	// the x and y coord of where the ray hit the block
 	float yHit = 0;
 
+	DWORD color = 0x00FF3333;
 	float textureX;	// the x-coord on the texture of the block, ie. what part of the texture are we going to render
-	float wallX;	// the (x,y) map coords of the block
-	float wallY;
+	//float wallX;	// the (x,y) map coords of the block
+	//float wallY;
 
 	bool wallIsHorizontal = false;
-	//DWORD color = 0x00FF3333;
-	DWORD color = 0x00FF3333;
 
 	// first check against the vertical map/wall lines
 	// we do this by moving to the right or left edge of the block we're standing in
@@ -196,7 +196,8 @@ void Entity::CastSingleRay(float rayAngle, int stripIdx)
 
 	if (dist)
 	{
-		gfx::drawLine(Player.posX *Map.Scale, Player.posY * Map.Scale,	xHit * Map.Scale, yHit * Map.Scale, MapBuffer, 0x0033BB66, 1);
+		if (ShowMap)
+			gfx::drawLine(Player.posX *Map.Scale, Player.posY * Map.Scale,	xHit * Map.Scale, yHit * Map.Scale, MapBuffer, 0x0033BB66, 1);
 
 		//int strip = screenStrips
 
@@ -204,7 +205,8 @@ void Entity::CastSingleRay(float rayAngle, int stripIdx)
 
 		// use perpendicular distance to adjust for fish eye
 		// distorted_dist = correct_dist / cos(relative_angle_of_ray)		// FISHEYE
-		dist = dist * cos(Player.Rot - rayAngle);
+		if (!EyeFish)
+			dist = dist * cos(Player.Rot - rayAngle);
 
 		// now calc the position, height and width of the wall strip
 

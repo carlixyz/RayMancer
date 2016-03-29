@@ -24,15 +24,13 @@ void AppManager::ForgetKeys()
 DWORD *AppManager::OpenWindow(char* title, int width, int height)
 {
 	window = new Display(title, width, height, Output::Windowed, Mode::TrueColor);
-	//window = new Display(title, width, height, Output::Windowed, Mode::FloatingPoint);
 	//ptwrap_events = new EventHandler();
 	window->listener(this);
 	canvas.Resize(width, height);
 	if (!window->open())
 		return NULL;
 	else
-		//return &canvas.Data[0].integer; // yikes
-		return &canvas[0]; // yikes
+		return &canvas[0]; // return &canvas.Data[0].integer; // yikes
 }
 
 bool AppManager::WindowClosed()
