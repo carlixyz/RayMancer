@@ -50,12 +50,19 @@ void main()
 		if (MainApp.KeyHit(Key::E))
 			EyeFish = !EyeFish;
 
+
+
 		Map.rasterMap(MapBuffer);					// BUILD MAP & DRAW PLAYER ORIENTATION
 		Player.DrawInMap(MapBuffer);
 		Player.CastRays();
 
 		if (ShowMap)
 			gfx::add(MapBuffer, backBuffer, 220, 140);	// ADD MINI MAP TO DOWN-RIGHT CORNER
+
+		for (int y = 0; y < HALF_SCR_H; y += 2)	// Some old CRT Interlaced Effect
+		for (int x = 0; x < HALF_SCR_W; x++)
+			backBuffer[y*HALF_SCR_W + x] = (backBuffer[y*HALF_SCR_W + x] >> 1) & 8355711 ;	
+
 
 
 		MainApp.UpdateWindowX2(backBuffer);
@@ -81,8 +88,8 @@ void Entity::CastRays()
 		float rayAngle = asinf(rayScreenPos / rayViewDist);
 
 		CastSingleRay(Rot + rayAngle, stripIdx++);
-
 	}
+
 }
 
 void Entity::CastSingleRay(float rayAngle, int stripIdx)
@@ -224,16 +231,20 @@ void Entity::CastSingleRay(float rayAngle, int stripIdx)
 
 
 		//calculate lowest and highest pixel to fill in current stripe
-		int drawStart = -height / 2 + HALF_SCR_H / 2;
+		int drawStart = -height / 2 + (HALF_SCR_H >> 1) + Player.HorizontLine;
+		int drawEnd = height / 2 + (HALF_SCR_H >> 1) + Player.HorizontLine;
+
 		if (drawStart < 0)
 			drawStart = 0;
-		int drawEnd = height / 2 + HALF_SCR_H / 2;
 		if (drawEnd >= HALF_SCR_H)
 			drawEnd = HALF_SCR_H - 1;
 
-		//gfx::verLine(stripIdx, drawStart, drawEnd, backBuffer, 0x00FF3333);
 	 
 		//give x and y sides different brightness
+
+		if (wallType != 1)
+			color = ~color;
+
 		if (side == 1) { color <<= 1; }
 
 		gfx::verLine((stripIdx*stripWidth) - 1, drawStart, drawEnd, backBuffer, color);
@@ -252,24 +263,12 @@ void Entity::DrawInMap(PixelBuffer & Dst)
 	float FrontX = (Player.posX + (cos(Player.Rot) * FrontLength)) * Map.Scale;
 	float FrontY = (Player.posY + (sin(Player.Rot) * FrontLength)) * Map.Scale;
 	
-	//std::cout << " RADIANS: " << Player.Rot << " - DEGREES: " << DEG(Player.Rot) << "\n";
-
-	//float LeftViewX = (Player.posX + (cos(Player.Rot + RAD(-30 ) )) * FrontLength *2) * Map.Scale;
-	//float LeftViewY = (Player.posY + (sin(Player.Rot + RAD(-30 ) )) * FrontLength * 2) * Map.Scale;
-	//float RightViewX = (Player.posX + (cos(Player.Rot + RAD(+30) )) * FrontLength * 2) * Map.Scale;
-	//float RightViewY = (Player.posY + (sin(Player.Rot + RAD(+30) )) * FrontLength * 2) * Map.Scale;
-	//gfx::drawLine(Player.posX * Map.Scale, Player.posY * Map.Scale, LeftViewX, LeftViewY, Dst, DirColor,  1);
-	//gfx::drawLine(Player.posX * Map.Scale, Player.posY * Map.Scale, RightViewX, RightViewY, Dst, DirColor, 1);
-
-
 	gfx::drawRect((Player.posX - Pzone) * Map.Scale, (Player.posY - Pzone) * Map.Scale, (Player.posX + Pzone) * Map.Scale, (Player.posY + Pzone) * Map.Scale, Dst,  ZoneColor);
 	gfx::drawLine(Player.posX * Map.Scale, Player.posY * Map.Scale, FrontX, FrontY, Dst, DirColor, 2);
-
 }
 
 void Entity::UpdateInput(float timeStep)
 {
-
 	Move = 0;
 	Dir = 0;
 
@@ -280,19 +279,41 @@ void Entity::UpdateInput(float timeStep)
 		Move = -1;
 
 	float moveStep = MoveSpeed * Move; // Player will move this far along the current direction vector
-
-	if (MainApp.KeyPressed(Key::D) || MainApp.KeyPressed(Key::Right))
+	
+	if (MainApp.KeyPressed(Key::Right))
 		Dir = 1;
 
-	if (MainApp.KeyPressed(Key::A) || MainApp.KeyPressed(Key::Left))
+	if ( MainApp.KeyPressed(Key::Left))
 		Dir = -1;
+
 
 	// Add rotation if player is rotating (player.dir != 0)
 	Rot += Dir * RotSpeed;
+	float cosR = cos(Rot);
+	float sinR = sin(Rot);
 
 	// Calculate new player position with simple trigonometry
-	float dX = cos(Rot) * moveStep;
-	float dY = sin(Rot) * moveStep;
+	float dX = cosR * moveStep; //float dX = cos(Rot) * moveStep;
+	float dY = sinR * moveStep; //float dY = sin(Rot) * moveStep;
+
+
+	if (MainApp.KeyPressed(Key::D))		// Check sidewalls and if is possible Strife to Right
+	{
+		if (!Map.isBlocked((int)(posX - sinR * MoveSpeed), posY))
+			posX -= sinR * MoveSpeed;
+
+		if (!Map.isBlocked(posX, (int)(posY + cosR * MoveSpeed)))
+			posY += cosR * MoveSpeed;
+	}
+
+	if (MainApp.KeyPressed(Key::A))		 //Check sidewalls and if is possible Strife to Left
+	{
+		if (!Map.isBlocked((int)(posX + sinR * MoveSpeed), posY))
+			posX += sinR * MoveSpeed;
+
+		if (!Map.isBlocked(posX, (int)(posY - cosR * MoveSpeed)))
+			posY -= cosR * MoveSpeed;
+	}
 
 	// Set new position smoothly (slide along the only axis we are abled to move)
 	if ( !Map.isBlocked(posX + dX, posY)) // smoother 
@@ -301,17 +322,16 @@ void Entity::UpdateInput(float timeStep)
 	if ( !Map.isBlocked(posX, posY + dY ))
 		posY += dY;
 
-	// Calculate new player position with simple trigonometry	// It Hungs the move
-	//float newX = posX + cos(Rot) * moveStep;
-	//float newY = posY + sin(Rot) * moveStep;
-	//if ( Map.isBlocked(newX, newY) )
-	//	return;
-	//posX = newX;
-	//posY = newY;
-
 	//speed modifiers
 	MoveSpeed = timeStep * 5.0f; //the constant value is in squares/second
 	RotSpeed = timeStep * 3.0f; //the constant value is in radians/second
+
+
+	if (MainApp.KeyPressed(Key::PageUp))	// Simulate LookUp
+		HorizontLine += 2;
+
+	if (MainApp.KeyPressed(Key::PageDown)) // Simulate LookDown
+		HorizontLine -= 2;
 }
 
  

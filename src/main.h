@@ -32,6 +32,8 @@ struct Entity
 	float MoveSpeed =0.18f;	// Move Multiplier: How far (in map units) does the player move each step/update
 	float RotSpeed =0.1f;		// Rot Multiplier: How much does the player rotate each step/update (in radians)
 
+	int HorizontLine = 0;
+
 	int stripWidth = 2;		// Def: 2
 	int numRays = ceil(HALF_SCR_W / stripWidth);
 	float FOV = RAD(60);
@@ -58,7 +60,7 @@ struct World
 
 	//inline int Get(int x, int y)
 	//{  return (x < 0 ? -1 : ((int)(x + y*width) >= Area ? -1 : data[(int)(x + y*width)]));  }
-	inline bool isBlocked(int x, int y)
+	inline bool isBlocked(int x, int y)	// Just input single values without width!
 	{
 		if (y < 0 || y >= height || x < 0 || x >= width)
 			return true;			//make sure that we cannot move outside level
@@ -78,7 +80,9 @@ struct World
 				int nearestMatch = (((int)(cy / scaleHeight) * (width)) + ((int)(cx / scaleWidth)));
 
 				//dst[pixel] = (src.data[nearestMatch] != 0 ? 0x00FF00FF : 0x0000FF00);
-				dst[pixel] = (data[nearestMatch] != 0 ? 0x008800FF : 0x00000000);
+				dst[pixel] = (data[nearestMatch] != 0 ? 0x008800FF : (900 * !(cx % Scale && cy % Scale)));
+
+				//dst[pixel] -= ~120 * (cx % Scale && cy % Scale);	// 16
 			}
 	}
 
@@ -91,12 +95,12 @@ struct World
 	1, 0, 0, 0, 0, 0, 0, 0, 0, 1,
 	1, 0, 0, 0, 0, 0, 0, 0, 0, 1,
 	1, 0, 0, 0, 0, 0, 0, 1, 0, 1,
+	1, 0, 0, 0, 0, 0, 0, 2, 0, 1,
 	1, 0, 0, 0, 0, 0, 0, 1, 0, 1,
-	1, 0, 0, 0, 0, 0, 0, 1, 0, 1,
-	1, 0, 0, 0, 0, 0, 0, 1, 0, 1,
+	1, 0, 0, 0, 0, 0, 0, 2, 0, 1,
 	1, 0, 0, 0, 0, 0, 0, 0, 0, 1,
 	1, 0, 1, 0, 0, 0, 0, 0, 0, 1,
-	1, 1, 1, 1, 1, 0, 1, 1, 1, 1
+	1, 1, 1, 2, 1, 0, 1, 1, 1, 1
 	}
 };
 
