@@ -299,28 +299,41 @@ void Entity::UpdateInput(float timeStep)
 
 	if (MainApp.KeyPressed(Key::D))		// Check sidewalls and if is possible Strife to Right
 	{
-		if (!Map.isBlocked((int)(posX - sinR * MoveSpeed), posY))
-			posX -= sinR * MoveSpeed;
+		//if (!Map.isBlocked((int)(posX - sinR * MoveSpeed ), posY))
+		//	posX -= sinR * MoveSpeed;
+		dX -= sinR * MoveSpeed;
 
-		if (!Map.isBlocked(posX, (int)(posY + cosR * MoveSpeed)))
-			posY += cosR * MoveSpeed;
+		//if (!Map.isBlocked(posX, (int)(posY  + cosR * MoveSpeed)))
+				//posY += cosR * MoveSpeed;
+		dY += cosR * MoveSpeed;
 	}
 
 	if (MainApp.KeyPressed(Key::A))		 //Check sidewalls and if is possible Strife to Left
 	{
-		if (!Map.isBlocked((int)(posX + sinR * MoveSpeed), posY))
-			posX += sinR * MoveSpeed;
+		//if (!Map.isBlocked((int)(posX + sinR  * MoveSpeed ), posY))
+		//	posX += sinR * MoveSpeed;
+		dX += sinR * MoveSpeed;
 
-		if (!Map.isBlocked(posX, (int)(posY - cosR * MoveSpeed)))
-			posY -= cosR * MoveSpeed;
+		//if (!Map.isBlocked(posX, (int)(posY - cosR * MoveSpeed )))
+			//	posY -= cosR * MoveSpeed;
+		dY -= cosR * MoveSpeed;
 	}
 
-	// Set new position smoothly (slide along the only axis we are abled to move)
-	if ( !Map.isBlocked(posX + dX, posY)) // smoother 
+	// Set new position smoothly (slide along the only axis we are abled to move) (Plus the Player Body Radius 0.15f~0.2f )
+	if ((dX > 0 && !Map.isBlocked(posX + 0.15f + dX, posY)) || (dX < 0 && !Map.isBlocked(posX - 0.2f + dX, posY)))
+	//if (!Map.isBlocked(posX + dX, posY)) // smoother 
 		posX += dX;
 
-	if ( !Map.isBlocked(posX, posY + dY ))
+	if ((dY > 0 && !Map.isBlocked(posX, posY + dY + 0.15f)) || (dY < 0 && !Map.isBlocked(posX, posY - 0.2f + dY)))
+	//if (!Map.isBlocked(posX, posY + dY))
 		posY += dY;
+
+
+	//if (!Map.isBlocked(posX + dX, posY)) // smoother 
+	//	posX += dX;
+
+	//if (!Map.isBlocked(posX , posY + dY))
+	//	posY += dY;
 
 	//speed modifiers
 	MoveSpeed = timeStep * 5.0f; //the constant value is in squares/second

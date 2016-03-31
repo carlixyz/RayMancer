@@ -8,20 +8,6 @@
 
 namespace PixelToaster
 {
-	// glenn's magical strcpy replacement with bram's template touch ...
-	template <int n> void magical_strcpy( char (&dest)[n], const char src[] )
-	{		
-		unsigned int i = 0;
-		while ( i < n - 1 )
-		{
-			if ( src[i] == 0 )
-				break;
-			dest[i] = src[i];
-			i++;
-		}
-		dest[i] = 0;
-	}
-
 	// derive your platform's display implementation from this and it will handle all the mundane details for you
 
 	class DisplayAdapter : public DisplayInterface
@@ -46,7 +32,17 @@ namespace PixelToaster
 		{
 			close();
 
-			magical_strcpy(_title, title);			
+			// glenn's magical strncpy replacement...
+			unsigned int i = 0;
+			while ( i < sizeof(_title) - 1 )
+			{
+				if ( title[i] == 0 )
+					break;
+				_title[i] = title[i];
+				i++;
+			}
+			_title[i] = 0;
+			
 			_width = width;
 			_height = height;
 			_output = output;
@@ -66,18 +62,18 @@ namespace PixelToaster
 			return _open;
 		}
 
-		bool update( const TrueColorPixel pixels[], const Rectangle * dirtyBox )
+		bool update( const TrueColorPixel pixels[] )
 		{
 			if ( pixels )
-				return update( pixels, 0, dirtyBox );
+				return update( pixels, 0 );
 			else
 				return false;
 		}
 
-		bool update( const FloatingPointPixel pixels[], const Rectangle * dirtyBox )
+		bool update( const FloatingPointPixel pixels[] )
 		{
 			if ( pixels )
-				return update( 0, pixels, dirtyBox );
+				return update( 0, pixels );
 			else
 				return false;
 		}
@@ -85,11 +81,6 @@ namespace PixelToaster
 		const char * title() const
 		{
 			return _title;
-		}
-
-		void title( const char title[] )
-		{
-			magical_strcpy(_title, title);
 		}
 
 		int width() const
@@ -138,7 +129,7 @@ namespace PixelToaster
 		// only one of the pointers will be non-null, this allows you to avoid
 		// duplicating update code between truecolor and floating point update methods.
 
-		virtual bool update( const TrueColorPixel * trueColorPixels, const FloatingPointPixel * floatingPointPixels, const Rectangle * dirtyBox ) { return true; }
+		virtual bool update( const TrueColorPixel * trueColorPixels, const FloatingPointPixel * floatingPointPixels ) { return true; }
 
 		// this defaults is virtual, override it to add your own defaults
 		// but make sure you always call the superclass defaults in your overridden function!
@@ -209,7 +200,7 @@ namespace PixelToaster
 		
 		double time()
 		{
-			clock_t counter = std::clock();
+			clock_t counter = clock();
 			double delta = ( counter - _timeCounter ) * _resolution;
 			_timeCounter = counter;
 			_time += delta;
@@ -218,7 +209,7 @@ namespace PixelToaster
 		
 		double delta()
 		{
-			clock_t counter = std::clock();
+			clock_t counter = clock();
 			double delta = ( counter - _deltaCounter ) * _resolution;
 			_deltaCounter = counter;
 			return delta;
@@ -231,9 +222,9 @@ namespace PixelToaster
 		
 		void wait(double seconds)
 		{
-			clock_t start = std::clock();
+			clock_t start = clock();
 			clock_t finish = start + clock_t( seconds / _resolution );
-			while ( std::clock() < finish );
+			while ( clock() < finish );
 		}
 		
 	private:

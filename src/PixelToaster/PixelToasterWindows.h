@@ -24,26 +24,6 @@
 
 namespace PixelToaster
 {
-	/// smart pointer for COM interfaces
-	
-	template <typename I>
-	class SmartI
-	{
-	public:
-		SmartI(I* i = NULL): i_(i) {}
-		SmartI(SmartI& other): i_(other.i_) { if (i_) i_->AddRef(); }
-		~SmartI() { if (i_) i_->Release(); i_ = NULL; }
-		SmartI& operator=(SmartI& other) { SmartI temp(other); swap(temp); return *this; }
-		void reset(I* i = NULL) { SmartI temp(i); swap(temp); }
-		I* const get() const { return i_; }
-		I* const operator->() const { return get(); }
-		I** address() { return &i_; }
-		void swap(SmartI& other) { I* i = i_; i_ = other.i_; other.i_ = i; }
-		const bool operator!() const { return i_ == NULL; }
-	private:
-		I* i_;
-	};
-
 	// Windows Adapter interface
 
 	class WindowsAdapter
@@ -436,23 +416,6 @@ namespace PixelToaster
 			return window;
 		}
 
-		// title management
-
-		void title( const char title[] )
-		{
-			if ( !window )
-				return;
-
-#ifdef UNICODE
-			wchar_t unicodeTitle[1024];
-			MultiByteToWideChar( CP_ACP, 0, title, -1, unicodeTitle, sizeof(unicodeTitle) );
-			SetWindowText( window, unicodeTitle );
-#else
-			SetWindowText( window, title );
-#endif
-
-		}
-
 		// listener management
 
 		void listener( Listener * listener )
@@ -500,15 +463,14 @@ namespace PixelToaster
 					updateSystemMenu();
 					break;
 
+				case WM_QUIT:
 				case WM_CLOSE:
 					if ( _listener )
-					{
 						if ( _listener->onClose( display->wrapper() ? *display->wrapper() : *display ) )
 							adapter->exit();
-					}
 					else
 						adapter->exit();
-					return 0;
+					break;
 
 				case WM_SETCURSOR:
 					if ( LOWORD( lParam ) == HTCLIENT )
@@ -877,8 +839,8 @@ namespace PixelToaster
 
 			// defaults
 
-			drawAsQuad = false;
-			scalesUp = false;
+			surface = NULL;
+			device = NULL;
 
 			// setup
 
@@ -889,6 +851,7 @@ namespace PixelToaster
 
 		~WindowsDevice()
 		{
+			destroyDeviceAndSurface();
 		}
 
 		/// check if device is valid
@@ -896,7 +859,7 @@ namespace PixelToaster
 
 		bool valid() const
 		{
-			if ( !device  && !primaryTexture )
+			if ( device == NULL && surface == NULL )
 				return false;
 
 			return !FAILED( device->TestCooperativeLevel() );		// not valid if device is lost
@@ -905,7 +868,7 @@ namespace PixelToaster
 		/// update the device pixels.
 		/// @returns true if the update succeeded, false otherwise.
 
-		bool update( const TrueColorPixel * trueColorPixels, const FloatingPointPixel * floatingPointPixels, const Rectangle * dirtyBox )
+		bool update( const TrueColorPixel * trueColorPixels, const FloatingPointPixel * floatingPointPixels )
 		{
 			// handle device loss
 
@@ -922,63 +885,61 @@ namespace PixelToaster
 
 			// copy pixels to surface
 
-			if ( !primaryTexture )
+			if ( !surface )
 				return false;
-
-
-			RECT rect, *pRect = 0;
-			if (dirtyBox)
-			{
-				rect.left = dirtyBox->xBegin;
-				rect.right = dirtyBox->xEnd;
-				rect.top = dirtyBox->yBegin;
-				rect.bottom = dirtyBox->yEnd;
-				pRect = &rect;
-			}
 
 			D3DLOCKED_RECT lock;
-			if ( FAILED( primaryTexture->LockRect( 0, &lock, pRect, D3DLOCK_NOSYSLOCK ) ) )
+
+			if ( FAILED( surface->LockRect( &lock, NULL, D3DLOCK_DISCARD ) ) )
 				return false;
 
-			unsigned char * dest = static_cast<unsigned char*>(lock.pBits);
-			const int bytesPerDestLine = lock.Pitch;
+			unsigned char * data = (unsigned char*) lock.pBits;
+			const int pitch = lock.Pitch;
 
-			Converter * converter = 0;
-			const unsigned char * source = 0;
-			int bytesPerSourcePixel = 0;
+			unsigned char * line = data;
+
 			if ( floatingPointPixels )
 			{
-				converter = requestConverter( Format::XBGRFFFF, textureFormat );
-				source = reinterpret_cast<const unsigned char*>(floatingPointPixels);
-				bytesPerSourcePixel = sizeof(FloatingPointPixel);
-			}
-			else
-			{
-				converter = requestConverter( Format::XRGB8888, textureFormat );
-				source = reinterpret_cast<const unsigned char*>(trueColorPixels);
-				bytesPerSourcePixel = sizeof(TrueColorPixel);
-			}
-			const int bytesPerSourceLine = width * bytesPerSourcePixel;
+				Converter * converter = requestConverter( Format::XBGRFFFF, format );
 
-			if ( converter )
-			{
-				converter->begin();
-
-				const Rectangle box = dirtyBox ? *dirtyBox : Rectangle(0, width, 0, height);
-				const int boxWidth = box.xEnd - box.xBegin;
-				source += (box.yBegin * width + box.xBegin) * bytesPerSourcePixel;
-
-				for ( int y = box.yBegin; y < box.yEnd; ++y )
+				if ( converter )
 				{
-					converter->convert( source, dest, boxWidth );
-					source += bytesPerSourceLine;
-					dest += bytesPerDestLine;
-				}
+					converter->begin();
 
-				converter->end();
+					const Pixel * source = floatingPointPixels;
+
+					for ( int y = 0; y < height; ++y )
+					{
+						converter->convert( source, line, width );
+						source += width;
+						line += pitch; 
+					}
+
+					converter->end();
+				}
+			}
+			else if ( trueColorPixels )
+			{
+				Converter * converter = requestConverter( Format::XRGB8888, format );
+
+				if (converter)
+				{
+					converter->begin();
+
+					const TrueColorPixel * source = trueColorPixels;
+
+					for ( int y = 0; y < height; y++ )
+					{
+						converter->convert( source, line, width );
+						source += width;
+						line += pitch; 
+					}
+
+					converter->end();
+				}
 			}
 
-			primaryTexture->UnlockRect( 0 );
+			surface->UnlockRect();
 
 			// paint display
 
@@ -997,35 +958,19 @@ namespace PixelToaster
 
 			// copy surface to back buffer
 
-			if ( drawAsQuad )
-			{
-				if( FAILED( device->BeginScene() ) )
-					return false;
+			LPDIRECT3DSURFACE9 backBuffer;
 
-				device->SetTexture( 0, primaryTexture.get() );
-				device->SetSamplerState( 0, D3DSAMP_MINFILTER, D3DTEXF_POINT );
-				device->SetSamplerState( 0, D3DSAMP_MAGFILTER, scalesUp ? D3DTEXF_LINEAR : D3DTEXF_POINT );
-				device->SetSamplerState( 0, D3DSAMP_MIPFILTER, D3DTEXF_NONE );
-				drawQuad();
-				device->SetTexture( 0, 0 );
+			device->GetBackBuffer( 0, 0, D3DBACKBUFFER_TYPE_MONO, &backBuffer );
 
-				device->EndScene();
-			}
-			else
-			{
-				SmartI<IDirect3DSurface9> surface, backBuffer;
+			if ( !backBuffer )
+				return false;
 
-				primaryTexture->GetSurfaceLevel( 0, surface.address() );
-				device->GetBackBuffer( 0, 0, D3DBACKBUFFER_TYPE_MONO, backBuffer.address() );
+			HRESULT result = device->UpdateSurface( surface, 0, backBuffer, NULL );
 
-				if ( !surface || !backBuffer )
-					return false;
+			backBuffer->Release();
 
-				HRESULT result = device->UpdateSurface( surface.get(), 0, backBuffer.get(), NULL );
-
-				if ( FAILED( result ) )
-					return false;
-			}
+			if ( FAILED( result ) )
+				return false;
 
 			// present back buffer to display
 
@@ -1069,20 +1014,6 @@ namespace PixelToaster
 			}
 		}
 
-		int sizeofFormat( Format format )
-		{
-			switch ( format )
-			{
-				case Format::XBGRFFFF: return 16;
-				case Format::XRGB8888: return 4;
-				case Format::XBGR8888: return 4;
-				case Format::RGB888: return 3;
-				case Format::RGB565: return 2;
-				case Format::XRGB1555: return 2;
-				default: return 0;
-			}
-		}
-
 	protected:
 
 		void zeroMemory( char * memory, int size )
@@ -1091,39 +1022,9 @@ namespace PixelToaster
 				*(memory++) = 0; 
 		}
 
-		bool createDevice( LPDIRECT3D9 direct3d, int width, int height, Format format, bool windowed, D3DDEVTYPE devType = D3DDEVTYPE_HAL )
+		bool createDevice( LPDIRECT3D9 direct3d, int width, int height, Format format, bool windowed )
 		{
-			this->deviceFormat = format;
-
-			const D3DFORMAT fmt = convertFormat( format );
-
-			if ( !windowed )
-			{
-				// round up to nearest resolution
-				
-				int bestWidth = 0, bestHeight = 0;
-				const UINT n = direct3d->GetAdapterModeCount( D3DADAPTER_DEFAULT, fmt );
-				for ( UINT i = 0; i < n; ++i )
-				{
-					D3DDISPLAYMODE mode;
-					if ( SUCCEEDED( direct3d->EnumAdapterModes( D3DADAPTER_DEFAULT, fmt, i, &mode ) ) )
-					{
-						if ( mode.Width >= width && mode.Height >= height && ( bestWidth == 0 || mode.Width <= bestWidth && mode.Height <= bestHeight ) )
-						{
-							bestWidth = mode.Width;
-							bestHeight = mode.Height;
-						}
-					}
-				}
-
-				if ( bestWidth == 0 )
-					return false;
-
-				scalesUp = width != bestHeight || height != bestHeight;
-				drawAsQuad |= scalesUp;
-				width = bestWidth;
-				height = bestHeight;
-			}
+			this->format = format;
 
 			// triple buffered device
 
@@ -1137,12 +1038,10 @@ namespace PixelToaster
 			presentation.hDeviceWindow = window;
 			presentation.BackBufferCount = 2;
 
-			device.reset();
-
-			if ( FAILED( direct3d->CreateDevice( D3DADAPTER_DEFAULT, devType, window, D3DCREATE_HARDWARE_VERTEXPROCESSING, &presentation, device.address() ) ) )
-				if ( FAILED( direct3d->CreateDevice( D3DADAPTER_DEFAULT, devType, window, D3DCREATE_MIXED_VERTEXPROCESSING, &presentation, device.address() ) ) )
-					if ( FAILED( direct3d->CreateDevice( D3DADAPTER_DEFAULT, devType, window, D3DCREATE_SOFTWARE_VERTEXPROCESSING, &presentation, device.address() ) ) )
-						device.reset();
+			if ( FAILED( direct3d->CreateDevice( D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, window, D3DCREATE_HARDWARE_VERTEXPROCESSING, &presentation, &device ) ) )
+				if ( FAILED( direct3d->CreateDevice( D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, window, D3DCREATE_MIXED_VERTEXPROCESSING, &presentation, &device ) ) )
+					if ( FAILED( direct3d->CreateDevice( D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, window, D3DCREATE_SOFTWARE_VERTEXPROCESSING, &presentation, &device ) ) )
+						device = NULL;
 
 			// double buffered fallback
 
@@ -1150,41 +1049,15 @@ namespace PixelToaster
 			{
 				presentation.BackBufferCount = 1;
 
-				if ( FAILED( direct3d->CreateDevice( D3DADAPTER_DEFAULT, devType, window, D3DCREATE_HARDWARE_VERTEXPROCESSING, &presentation, device.address() ) ) )
-					if ( FAILED( direct3d->CreateDevice( D3DADAPTER_DEFAULT, devType, window, D3DCREATE_MIXED_VERTEXPROCESSING, &presentation, device.address() ) ) )
-						if ( FAILED( direct3d->CreateDevice( D3DADAPTER_DEFAULT, devType, window, D3DCREATE_SOFTWARE_VERTEXPROCESSING, &presentation, device.address() ) ) )
-							device.reset();
+				if ( FAILED( direct3d->CreateDevice( D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, window, D3DCREATE_HARDWARE_VERTEXPROCESSING, &presentation, &device ) ) )
+					if ( FAILED( direct3d->CreateDevice( D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, window, D3DCREATE_MIXED_VERTEXPROCESSING, &presentation, &device ) ) )
+						if ( FAILED( direct3d->CreateDevice( D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, window, D3DCREATE_SOFTWARE_VERTEXPROCESSING, &presentation, &device ) ) )
+							device = NULL;
 			}
 
 			// check for failure
 
 			if ( !device )
-				return false;
-
-			return true;
-		}
-
-		bool createTexture( const SmartI<IDirect3DDevice9>& device, int width, int height, Format format )
-		{
-			this->textureFormat = format;
-			D3DFORMAT fmt = convertFormat(format);
-
-			primaryTexture.reset();
-
-			if ( textureFormat == Format::XBGRFFFF || textureFormat != deviceFormat )
-			{
-				if ( FAILED( device->CreateTexture( width, height, 1, D3DUSAGE_DYNAMIC, fmt, D3DPOOL_DEFAULT, primaryTexture.address(), NULL ) ) )
-					primaryTexture.reset();
-			}
-			else
-			{
-				if ( FAILED( device->CreateTexture( width, height, 1, 0, fmt, D3DPOOL_SYSTEMMEM, primaryTexture.address(), NULL ) ) )
-					primaryTexture.reset();
-			}
-
-			// check for failure
-
-			if ( !primaryTexture )
 				return false;
 
 			return true;
@@ -1196,92 +1069,61 @@ namespace PixelToaster
 		{
 			// create device
 
-			bool tryRefDevice = false;
-			if ( !( mode == Mode::FloatingPoint && createDevice( direct3d, width, height, Format::XBGRFFFF, windowed ) ) )
-				if ( !createDevice( direct3d, width, height, Format::XRGB8888, windowed ) )
-					if ( !createDevice( direct3d, width, height, Format::XBGR8888, windowed ) )
-						if ( !createDevice( direct3d, width, height, Format::RGB888, windowed ) )
-							if ( !createDevice( direct3d, width, height, Format::RGB565, windowed ) )
-								if ( !createDevice(direct3d, width, height, Format::XRGB1555, windowed ) )
-									tryRefDevice = true;
-
-			// try to create reference device if nothing else works
-
-			if (tryRefDevice)
+			if ( mode == Mode::FloatingPoint )
 			{
-				if ( !( mode == Mode::FloatingPoint && createDevice( direct3d, width, height, Format::XBGRFFFF, windowed, D3DDEVTYPE_REF ) ) )
-					if ( !createDevice( direct3d, width, height, Format::XRGB8888, windowed, D3DDEVTYPE_REF ) )
-						return;
+				if ( !createDevice( direct3d, width, height, Format::XBGRFFFF, windowed ) )
+					if ( !createDevice( direct3d, width, height, Format::XRGB8888, windowed ) )
+						if ( !createDevice( direct3d, width, height, Format::XBGR8888, windowed ) )
+							if ( !createDevice( direct3d, width, height, Format::RGB888, windowed ) )
+								if ( !createDevice( direct3d, width, height, Format::RGB565, windowed ) )
+									if ( !createDevice(direct3d, width, height, Format::XRGB1555, windowed ) )
+										return;
+			}
+			else
+			{
+				if ( !createDevice(direct3d, width, height, Format::XRGB8888, windowed ) )
+					if ( !createDevice(direct3d, width, height, Format::XBGR8888, windowed ) )
+						if ( !createDevice(direct3d, width, height, Format::RGB888, windowed ) )
+							if ( !createDevice(direct3d, width, height, Format::RGB565, windowed ) )
+								if ( !createDevice(direct3d, width, height, Format::XRGB1555, windowed ) )
+									return;
 			}
 
 			// create surface
 
-			if ( !( mode == Mode::FloatingPoint && createTexture( device, width, height, Format::XBGRFFFF ) ) )
-				if ( !createTexture( device, width, height, Format::XRGB8888 ) )
-					if ( !createTexture( device, width, height, Format::XBGR8888 ) )
-						if ( !createTexture( device, width, height, Format::RGB888 ) )
-							if ( !createTexture( device, width, height, Format::RGB565 ) )
-								if ( !createTexture( device, width, height, Format::XRGB1555 ) )
-									return;
-
-			drawAsQuad |= deviceFormat != textureFormat;
+			device->CreateOffscreenPlainSurface( width, height, convertFormat(format), D3DPOOL_SYSTEMMEM, &surface, NULL );
 		}
 
-		void drawQuad()
+		void destroyDeviceAndSurface()
 		{
-			D3DSURFACE_DESC description;
+			if ( surface )
+			{
+				surface->Release();
+				surface = NULL;
+			}
 
-			SmartI<IDirect3DSurface9> surface;
-			device->GetRenderTarget( 0, surface.address() );
-			surface->GetDesc( &description );
-			surface.reset();
-
-			const float w = description.Width - 0.5f;
-			const float h = description.Height - 0.5f;
-
-			Vertex quad[4];
-			quad[0].pos = D3DXVECTOR4(-0.5f, -0.5f, 0.5f, 1.0f);
-			quad[0].tex = D3DXVECTOR2(0.f, 0.f);
-			quad[1].pos = D3DXVECTOR4(w, -0.5f, 0.5f, 1.0f);
-			quad[1].tex = D3DXVECTOR2(1.f, 0.f);
-			quad[2].pos = D3DXVECTOR4(-0.5f, h, 0.5f, 1.0f);
-			quad[2].tex = D3DXVECTOR2(0.f, 1.f);
-			quad[3].pos = D3DXVECTOR4(w, h, 0.5f, 1.0f);
-			quad[3].tex = D3DXVECTOR2(1.f, 1.f);
-
-			device->SetRenderState(D3DRS_ZENABLE, FALSE);
-			device->SetFVF(FVF);
-			device->DrawPrimitiveUP(D3DPT_TRIANGLESTRIP, 2, quad, sizeof(Vertex));
-			device->SetRenderState(D3DRS_ZENABLE, TRUE);
+			if ( device )
+			{
+				device->Release();
+				device = NULL;
+			}
 		}
 
 	private:
-
-		struct Vertex 
-		{
-			D3DXVECTOR4 pos;
-			D3DXVECTOR2 tex;
-		};
-		enum { FVF = D3DFVF_XYZRHW | D3DFVF_TEX1 };
 
 		LPDIRECT3D9 direct3d;
 		HWND window;
 
 		D3DPRESENT_PARAMETERS presentation;
-		SmartI<IDirect3DDevice9> device;
-		SmartI<IDirect3DTexture9> primaryTexture;
-		SmartI<IDirect3DTexture9> thingy;
-		SmartI<ID3DXEffect> effect;
+		LPDIRECT3DDEVICE9 device;
+		LPDIRECT3DSURFACE9 surface;
 
 		int width;
 		int height;
-		Format deviceFormat;
-		Format textureFormat;
+		Format format;
 		Mode mode;
 		bool windowed;
 		bool lost;
-		bool drawAsQuad;
-		bool scalesUp;
 	};
 
 	// ********************* Windows Display Implementation ***************************
@@ -1345,7 +1187,7 @@ namespace PixelToaster
 			DisplayAdapter::close();
 		}
 
-		bool update( const TrueColorPixel * trueColorPixels, const FloatingPointPixel * floatingPointPixels, const Rectangle * dirtyBox )
+		bool update( const TrueColorPixel * trueColorPixels, const FloatingPointPixel * floatingPointPixels )
 		{
 			if ( shutdown )
 			{
@@ -1367,7 +1209,7 @@ namespace PixelToaster
 				window->update();
 
 			if ( device )
-				device->update( trueColorPixels, floatingPointPixels, dirtyBox );
+				device->update( trueColorPixels, floatingPointPixels );
 
 			if ( window && !window->visible() )
 			{
@@ -1376,14 +1218,6 @@ namespace PixelToaster
 			}
 
 			return true;
-		}
-
-		void title( const char title[] )
-		{
-			DisplayAdapter::title( title );
-
-			if ( window )
-				window->title( title );
 		}
 
 		void listener( Listener * listener )
@@ -1408,7 +1242,7 @@ namespace PixelToaster
 					SelectObject( dc, brush );
 					RECT rect;
 					GetClientRect( window->handle(), &rect );
-					::Rectangle( dc, 0, 0, rect.right, rect.bottom );
+					Rectangle( dc, 0, 0, rect.right, rect.bottom );
 					DeleteObject( brush );
 					ReleaseDC( window->handle(), dc );
 				}

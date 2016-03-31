@@ -32,6 +32,7 @@ struct Entity
 	float MoveSpeed =0.18f;	// Move Multiplier: How far (in map units) does the player move each step/update
 	float RotSpeed =0.1f;		// Rot Multiplier: How much does the player rotate each step/update (in radians)
 
+	//float RadCollision = 0.15f;	// it's a reference to the Player Raidus for better collision detection
 	int HorizontLine = 0;
 
 	int stripWidth = 2;		// Def: 2

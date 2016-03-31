@@ -30,7 +30,7 @@
 
 // current API version ( API is not allowed to change in point releases )
 
-#define PIXELTOASTER_VERSION 1.5
+#define PIXELTOASTER_VERSION 1.4
 
 // disable annoying visual c++ warnings
 
@@ -180,10 +180,10 @@ namespace PixelToaster
 
 		FloatingPointPixel()
 		{
+			a = 0.0f;
 			r = 0.0f;
 			g = 0.0f;
 			b = 0.0f;
-			a = 0.0f;
 		}
 
 		/// This convenience constructor lets you specify color and alpha values at creation
@@ -196,10 +196,10 @@ namespace PixelToaster
 			this->a = a;
 		}
 
-        float r;        ///< red component
-        float g;        ///< green component
-        float b;        ///< blue component
         float a;        ///< alpha component (unused)
+        float b;        ///< blue component
+        float g;        ///< green component
+        float r;        ///< red component
     };          
 
 	/// since floating point color is the default, we setup a typedef to allow users to shortcut it just to "Pixel"
@@ -751,18 +751,6 @@ assert( ! (a == b) );
         Code code;
     };
 
-	// Rectangular range of pixels: [xBegin, xEnd) x [yBegin, yEnd)
-	// 
-	struct Rectangle
-	{
-		int xBegin;	///< first column in range
-		int xEnd;	///< one past last column in range
-		int yBegin;	///< first row in range
-		int yEnd;	///< one past last row in range
-		Rectangle(): xBegin(0), xEnd(0), yBegin(0), yEnd(0) {}
-		Rectangle(int xb, int xe, int yb, int ye): xBegin(xb), xEnd(xe), yBegin(yb), yEnd(ye) {}
-	};
-
 	// internal factory methods
 
 	PIXELTOASTER_API class DisplayInterface * createDisplay();
@@ -782,11 +770,10 @@ assert( ! (a == b) );
 
 		virtual bool open() const = 0;
 
-        virtual bool update( const FloatingPointPixel pixels[], const Rectangle* dirtyBox = 0 ) = 0;
-        virtual bool update( const TrueColorPixel pixels[], const Rectangle* dirtyBox = 0 ) = 0;
+        virtual bool update( const FloatingPointPixel pixels[] ) = 0;
+        virtual bool update( const TrueColorPixel pixels[] ) = 0;
 
         virtual const char * title() const = 0;
-		virtual void title( const char title[] ) = 0;
         virtual int width() const = 0;
         virtual int height() const = 0;
         virtual Mode mode() const = 0;
@@ -927,21 +914,13 @@ while ( display.open() )
         /// You can calculate the offset for a pixel in the linear array as follows: int offset = width*y + x;
         /// This is the correct update method to call when the display was opened in Mode::FloatingPoint,
         /// however it is safe to call this method even when operating in Mode::TrueColor if you wish.
-		///
-		/// The dirty box acts as a @b hint to the update function that only pixels inside that box have been changed
-		/// since last update.  The update function does not need to respect this hint and may do a full update
-		/// instead.  In particular, it will do this if it can avoid a buffer copy when matching formats are found.
-		/// That's why you still need to provide a full buffer of pixels, and the ones outside dirtyBox should 
-		/// be the same pixels as the previous call.
-		///
         /// @param pixels the pixels to copy to the screen.
- 		/// @param dirtyBox range of pixels that have been changed since last call.
         /// @returns true if the update was successful.
 
-        bool update( const class FloatingPointPixel pixels[], const Rectangle * dirtyBox = 0 )
+        bool update( const class FloatingPointPixel pixels[] )
         {
             if ( internal )
-                return internal->update( pixels, dirtyBox );
+                return internal->update( pixels );
             else
                 return false;
         }
@@ -952,21 +931,13 @@ while ( display.open() )
         /// You can calculate the offset for a pixel in the linear array as follows: int offset = width*y + x;
         /// This is the natural update method to call when the display was opened in Mode::TrueColor,
         /// however it is safe to call this method even when operating in Mode::FloatingPoint if you wish.
- 		///
-		/// The dirty box acts as a @b hint to the update function that only pixels inside that box have been changed
-		/// since last update.  The update function does not need to respect this hint and may do a full update
-		/// instead.  In particular, it will do this if it can avoid a buffer copy when matching formats are found.
-		/// That's why you still need to provide a full buffer of pixels, and the ones outside dirtyBox should 
-		/// be the same pixels as the previous call.
-		///
         /// @param pixels the pixels to copy to the screen.
-		/// @param dirtyBox range of pixels that have been changed since last call.
         /// @returns true if the update was successful.
 
-        bool update( const TrueColorPixel pixels[], const Rectangle * dirtyBox = 0 )
+        bool update( const TrueColorPixel pixels[] )
         {
             if (internal)
-                return internal->update( pixels, dirtyBox );
+                return internal->update( pixels );
             else
                 return false;
         }
@@ -978,9 +949,9 @@ while ( display.open() )
         /// @param pixels the pixels to copy to the screen.
         /// @returns true if the update was successful.
 
-		bool update( const vector<FloatingPointPixel> & pixels, const Rectangle * dirtyBox = 0 )
+		bool update( const vector<FloatingPointPixel> & pixels )
         {
-			return update( &pixels[0], dirtyBox );
+			return update( &pixels[0] );
         }
 
         /// Update display with standard vector of truecolor pixels.
@@ -988,9 +959,9 @@ while ( display.open() )
         /// @param pixels the pixels to copy to the screen.
         /// @returns true if the update was successful.
 
-		bool update( const vector<TrueColorPixel> & pixels, const Rectangle * dirtyBox = 0 )
+		bool update( const vector<TrueColorPixel> & pixels )
         {
-			return update( &pixels[0], dirtyBox );
+			return update( &pixels[0] );
         }
 
 #endif
@@ -1004,14 +975,6 @@ while ( display.open() )
             else
                 return "";
         }
-
-		/// Set display title
-
-		void title( const char title[] )
-		{
-			if (internal)
-				internal->title(title);
-		}
 
         /// Get display width
 
@@ -1340,7 +1303,7 @@ int main()
 		/// eg. Escape quits without you needing to do anything. default is true.
 		/// override and return false if you dont want default key handlers.
 
-		virtual bool defaultKeyHandlers() const { return true; }
+		bool defaultKeyHandlers() const { return true; }
 
         /// On key down.
         /// Called once only when a key is pressed and held.
